@@ -1,0 +1,54 @@
+name: Go
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "go/**"
+      - ".github/workflows/go.yml"
+      - ".github/actions/go/**"
+      - ".github/actions/docker-build/**"
+  push:
+    branches: [main]
+    paths:
+      - "go/**"
+      - ".github/workflows/go.yml"
+      - ".github/actions/go/**"
+      - ".github/actions/docker-build/**"
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      - name: Lint
+        uses: ./.github/actions/go/lint
+
+  build:
+    name: Build
+    needs: lint
+    # Lint is skipped on merge into main, so run when it passed or was skipped.
+    if: ${{ !cancelled() && (needs.lint.result == 'success' || needs.lint.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      - name: Build and push
+        uses: ./.github/actions/docker-build
+        with:
+          context: go
+          image: hello-world:go.${{ github.run_number }}
+          # Pushing to Docker Hub is not enabled yet. To enable it, add the
+          # DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets, prefix image with
+          # the Docker Hub username, and uncomment the lines below. Pull
+          # requests only build the image and never push it.
+          #
+          # push: ${{ github.event_name != 'pull_request' }}
+          # username: ${{ secrets.DOCKERHUB_USERNAME }}
+          # token: ${{ secrets.DOCKERHUB_TOKEN }}

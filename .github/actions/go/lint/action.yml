@@ -1,0 +1,31 @@
+name: Go lint
+description: Checks the Go code with gofmt and go vet, and the Dockerfile with hadolint.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go/go.mod
+
+    - name: Check the formatting with gofmt
+      shell: bash
+      working-directory: go
+      run: |
+        unformatted=$(gofmt -l src)
+        if [ -n "$unformatted" ]; then
+          echo "These files need gofmt:"
+          echo "$unformatted"
+          exit 1
+        fi
+
+    - name: Check the code with go vet
+      shell: bash
+      working-directory: go
+      run: go vet ./src
+
+    - name: Check the Dockerfile with hadolint
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: go/Dockerfile
