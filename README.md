@@ -9,6 +9,8 @@ The instructions below are written for Linux.
 - [Overview](#overview)
 - [How it works](#how-it-works)
 - [Project structure](#project-structure)
+- [Continuous integration](#continuous-integration)
+  - [Lint checks](#lint-checks)
 - [Python](#python)
   - [Requirements](#requirements)
   - [Setup and run](#setup-and-run)
@@ -43,6 +45,19 @@ A port is a number that identifies a program on your computer. Giving each appli
 
 ```
 hello-world/
+    .github/
+        actions/
+            docker-build/
+                action.yml
+            go/
+                lint/
+                    action.yml
+            python/
+                lint/
+                    action.yml
+        workflows/
+            go.yml
+            python.yml
     .gitignore
     README.md
     go/
@@ -58,6 +73,49 @@ hello-world/
         src/
             main.py
 ```
+
+## Continuous integration
+
+The repository uses GitHub Actions. Each application has its own workflow:
+
+| Workflow | File | Runs when these files change |
+|---|---|---|
+| Python build and push | `.github/workflows/python.yml` | `python/`, `python.yml`, `.github/actions/python/`, `.github/actions/docker-build/` |
+| Go build and push | `.github/workflows/go.yml` | `go/`, `go.yml`, `.github/actions/go/`, `.github/actions/docker-build/` |
+
+A change to only the Python files runs only the Python workflow, and the same for Go. A change to the shared Docker build runs both.
+
+The workflow files only decide when to run and in what order. The steps themselves are in composite actions, which are reusable groups of steps in `.github/actions/`:
+
+| Action | Used by | What it does |
+|---|---|---|
+| `.github/actions/python/lint` | Python workflow | Runs the Python lint checks. |
+| `.github/actions/go/lint` | Go workflow | Runs the Go lint checks. |
+| `.github/actions/docker-build` | Both workflows | Builds the Docker image, and pushes it to Docker Hub when that is turned on. |
+
+Each workflow runs:
+
+- **On a pull request into `main`:** runs the lint checks below, then builds the Docker image to check that it still works. If a lint check fails, the build does not run.
+- **When a pull request is merged into `main`:** builds the Docker image. Pushing the image to Docker Hub is not enabled yet. The push steps are already written in the shared Docker build action, and each workflow has commented-out lines that turn them on.
+- **By hand:** open the **Actions** tab on GitHub, choose the workflow, and click **Run workflow**.
+
+The lint checks do not run on merge, because the code already passed them in the pull request.
+
+The image is tagged `hello-world:<language>.<run number>`, for example `hello-world:python.12`. The run number goes up by one every time the workflow runs, so it replaces the build number you type yourself when building locally. Each workflow has its own run number.
+
+### Lint checks
+
+Lint tools read the code and point out mistakes and formatting problems without running it.
+
+| Workflow | Tool | What it checks | Run it yourself |
+|---|---|---|---|
+| Python | ruff | Code mistakes, such as unused imports | `ruff check python` |
+| Python | ruff | Code formatting | `ruff format --check python` |
+| Go | gofmt | Code formatting | `gofmt -l go/src` |
+| Go | go vet | Common code mistakes | `cd go && go vet ./src` |
+| Both | hadolint | Dockerfile mistakes and best practices | `hadolint python/Dockerfile go/Dockerfile` |
+
+To fix formatting automatically, run `ruff format python` for Python or `gofmt -w go/src` for Go.
 
 # Python
 
@@ -117,13 +175,13 @@ Run these commands from the root of the repository.
    The number in the tag counts the builds. Increase it by one each time you build a new version: `python.2`, `python.3`, and so on. This keeps older images available, so you can still run or compare them.
 
    ```
-   docker build -t hello-world:python.1 python
+   docker image build -t hello-world:python.1 python
    ```
 
 2. Start a container. `-p 8000:8000` connects port 8000 on your computer to port 8000 in the container, and `--rm` removes the container when it stops. Use the tag of the image you want to run.
 
    ```
-   docker run --rm -p 8000:8000 hello-world:python.1
+   docker container run --rm -p 8000:8000 hello-world:python.1
    ```
 
 3. Open http://localhost:8000 in your browser.
@@ -238,13 +296,13 @@ Run these commands from the root of the repository.
    The number in the tag counts the builds. Increase it by one each time you build a new version: `go.2`, `go.3`, and so on. This keeps older images available, so you can still run or compare them.
 
    ```
-   docker build -t hello-world:go.1 go
+   docker image build -t hello-world:go.1 go
    ```
 
 2. Start a container. `-p 8080:8080` connects port 8080 on your computer to port 8080 in the container, and `--rm` removes the container when it stops. Use the tag of the image you want to run.
 
    ```
-   docker run --rm -p 8080:8080 hello-world:go.1
+   docker container run --rm -p 8080:8080 hello-world:go.1
    ```
 
 3. Open http://localhost:8080 in your browser.
@@ -325,7 +383,7 @@ COPY src/ ./src/
 RUN CGO_ENABLED=0 go build -o hello-world ./src
 
 # Run stage: copy only the compiled program into a minimal image
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /app/hello-world /hello-world
 EXPOSE 8080
 CMD ["/hello-world"]
@@ -340,7 +398,7 @@ This Dockerfile has two stages. The first stage compiles the program, and the se
 | `COPY go.mod ./` | Copies the module file into the image. |
 | `COPY src/ ./src/` | Copies the folder with the application code into the image. |
 | `RUN CGO_ENABLED=0 go build -o hello-world ./src` | Compiles the code in `src` into a file named `hello-world`. `CGO_ENABLED=0` makes the program self-contained, so it runs without any other system libraries. |
-| `FROM gcr.io/distroless/static-debian12` | Starts the second stage from a very small image that contains almost nothing except what a self-contained program needs. |
+| `FROM gcr.io/distroless/static-debian12:nonroot` | Starts the second stage from a very small image that contains almost nothing except what a self-contained program needs. The `nonroot` tag runs the program as a regular user instead of the administrator (root), which is safer. |
 | `COPY --from=build /app/hello-world /hello-world` | Copies the compiled program from the `build` stage. |
 | `EXPOSE 8080` | Notes that the application listens on port 8080. |
 | `CMD ["/hello-world"]` | Runs the program when the container starts. |

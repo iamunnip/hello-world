@@ -1,0 +1,19 @@
+name: Python lint
+description: Checks the Python code with ruff and the Dockerfile with hadolint.
+
+runs:
+  using: composite
+  steps:
+    - name: Check the code with ruff
+      uses: astral-sh/ruff-action@v3
+      with:
+        src: python
+
+    - name: Check the formatting with ruff
+      shell: bash
+      run: ruff format --check --diff python
+
+    - name: Check the Dockerfile with hadolint
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: python/Dockerfile
