@@ -28,8 +28,8 @@ The instructions below are written for Linux.
 
 | Language | Folder | Port | URL |
 |---|---|---|---|
-| Python | `src/python` | 8000 | http://localhost:8000 |
-| Go | `src/go` | 8080 | http://localhost:8080 |
+| Python | `python` | 8000 | http://localhost:8000 |
+| Go | `go` | 8080 | http://localhost:8080 |
 
 Each application uses its own port, so both can run at the same time in separate terminals.
 
@@ -45,17 +45,18 @@ A port is a number that identifies a program on your computer. Giving each appli
 hello-world/
     .gitignore
     README.md
-    src/
-        go/
-            .dockerignore
-            Dockerfile
-            go.mod
+    go/
+        .dockerignore
+        Dockerfile
+        go.mod
+        src/
             main.go
-        python/
-            .dockerignore
-            Dockerfile
+    python/
+        .dockerignore
+        Dockerfile
+        requirements.txt
+        src/
             main.py
-            requirements.txt
 ```
 
 # Python
@@ -92,13 +93,13 @@ Run these commands from the root of the repository.
 3. Install the dependencies.
 
    ```
-   pip install -r src/python/requirements.txt
+   pip install -r python/requirements.txt
    ```
 
 4. Start the application.
 
    ```
-   python src/python/main.py
+   python python/src/main.py
    ```
 
 5. Open http://localhost:8000 in your browser. You should see "Hello, World from Python!"
@@ -111,16 +112,18 @@ Instead of installing Python and Flask, you can run the application in a Docker 
 
 Run these commands from the root of the repository.
 
-1. Build the image. `-t` gives the image a name, and `src/python` is the folder that contains the `Dockerfile`.
+1. Build the image. `-t` names the image `hello-world` and gives it the tag `python.1`, and `python` is the folder that contains the `Dockerfile`.
+
+   The number in the tag counts the builds. Increase it by one each time you build a new version: `python.2`, `python.3`, and so on. This keeps older images available, so you can still run or compare them.
 
    ```
-   docker build -t hello-python src/python
+   docker build -t hello-world:python.1 python
    ```
 
-2. Start a container. `-p 8000:8000` connects port 8000 on your computer to port 8000 in the container, and `--rm` removes the container when it stops.
+2. Start a container. `-p 8000:8000` connects port 8000 on your computer to port 8000 in the container, and `--rm` removes the container when it stops. Use the tag of the image you want to run.
 
    ```
-   docker run --rm -p 8000:8000 hello-python
+   docker run --rm -p 8000:8000 hello-world:python.1
    ```
 
 3. Open http://localhost:8000 in your browser.
@@ -129,7 +132,7 @@ To stop the container, press `Ctrl+C` in the terminal.
 
 ## Code explanation
 
-File: `src/python/main.py`
+File: `python/src/main.py`
 
 ```python
 from flask import Flask
@@ -158,7 +161,7 @@ if __name__ == "__main__":
 
 ## Dependencies
 
-File: `src/python/requirements.txt`
+File: `python/requirements.txt`
 
 | Code | What it does |
 |---|---|
@@ -166,14 +169,14 @@ File: `src/python/requirements.txt`
 
 ## Dockerfile
 
-File: `src/python/Dockerfile`
+File: `python/Dockerfile`
 
 ```dockerfile
 FROM python:3.14-slim
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-COPY main.py ./
+COPY src/main.py ./
 EXPOSE 8000
 CMD ["flask", "--app", "main", "run", "--host", "0.0.0.0", "--port", "8000"]
 ```
@@ -184,11 +187,11 @@ CMD ["flask", "--app", "main", "run", "--host", "0.0.0.0", "--port", "8000"]
 | `WORKDIR /app` | Sets `/app` as the folder inside the image where the next commands run. |
 | `COPY requirements.txt ./` | Copies the dependency list into the image. |
 | `RUN pip install --no-cache-dir -r requirements.txt` | Installs Flask. `--no-cache-dir` keeps the image smaller. Docker reuses this step on later builds as long as `requirements.txt` has not changed. |
-| `COPY main.py ./` | Copies the application code into the image. |
+| `COPY src/main.py ./` | Copies the application code into the image. |
 | `EXPOSE 8000` | Notes that the application listens on port 8000. |
 | `CMD [...]` | Starts the application with the `flask` command. `--host 0.0.0.0` makes the server accept connections from outside the container. Without it, the server only listens inside the container and the browser cannot reach it. |
 
-The `src/python/.dockerignore` file lists files that Docker should not send into the build, such as `__pycache__/` and virtual environments.
+The `python/.dockerignore` file lists files that Docker should not send into the build, such as `__pycache__/` and virtual environments.
 
 # Go
 
@@ -211,13 +214,13 @@ Run these commands from the root of the repository.
 1. Move into the Go folder.
 
    ```
-   cd src/go
+   cd go
    ```
 
-2. Start the application. The `.` means "run the module in the current folder".
+2. Start the application. `./src` tells Go where the code is.
 
    ```
-   go run .
+   go run ./src
    ```
 
 3. Open http://localhost:8080 in your browser. You should see "Hello, World from Go!"
@@ -230,16 +233,18 @@ Instead of installing Go, you can run the application in a Docker container. Thi
 
 Run these commands from the root of the repository.
 
-1. Build the image. `-t` gives the image a name, and `src/go` is the folder that contains the `Dockerfile`.
+1. Build the image. `-t` names the image `hello-world` and gives it the tag `go.1`, and `go` is the folder that contains the `Dockerfile`.
+
+   The number in the tag counts the builds. Increase it by one each time you build a new version: `go.2`, `go.3`, and so on. This keeps older images available, so you can still run or compare them.
 
    ```
-   docker build -t hello-go src/go
+   docker build -t hello-world:go.1 go
    ```
 
-2. Start a container. `-p 8080:8080` connects port 8080 on your computer to port 8080 in the container, and `--rm` removes the container when it stops.
+2. Start a container. `-p 8080:8080` connects port 8080 on your computer to port 8080 in the container, and `--rm` removes the container when it stops. Use the tag of the image you want to run.
 
    ```
-   docker run --rm -p 8080:8080 hello-go
+   docker run --rm -p 8080:8080 hello-world:go.1
    ```
 
 3. Open http://localhost:8080 in your browser.
@@ -248,7 +253,7 @@ To stop the container, press `Ctrl+C` in the terminal.
 
 ## Code explanation
 
-File: `src/go/main.go`
+File: `go/src/main.go`
 
 ```go
 package main
@@ -292,7 +297,7 @@ func main() {
 
 ## Module file
 
-File: `src/go/go.mod`
+File: `go/go.mod`
 
 ```
 module hello-world
@@ -309,15 +314,15 @@ There is no `go.sum` file because the application only uses Go's standard librar
 
 ## Dockerfile
 
-File: `src/go/Dockerfile`
+File: `go/Dockerfile`
 
 ```dockerfile
 # Build stage: compile the program
 FROM golang:1.27 AS build
 WORKDIR /app
 COPY go.mod ./
-COPY main.go ./
-RUN CGO_ENABLED=0 go build -o hello-world .
+COPY src/ ./src/
+RUN CGO_ENABLED=0 go build -o hello-world ./src
 
 # Run stage: copy only the compiled program into a minimal image
 FROM gcr.io/distroless/static-debian12
@@ -333,11 +338,11 @@ This Dockerfile has two stages. The first stage compiles the program, and the se
 | `FROM golang:1.27 AS build` | Starts the first stage from an official image that has Go 1.27 installed, and names the stage `build`. |
 | `WORKDIR /app` | Sets `/app` as the folder inside the image where the next commands run. |
 | `COPY go.mod ./` | Copies the module file into the image. |
-| `COPY main.go ./` | Copies the application code into the image. |
-| `RUN CGO_ENABLED=0 go build -o hello-world .` | Compiles the program into a file named `hello-world`. `CGO_ENABLED=0` makes the program self-contained, so it runs without any other system libraries. |
+| `COPY src/ ./src/` | Copies the folder with the application code into the image. |
+| `RUN CGO_ENABLED=0 go build -o hello-world ./src` | Compiles the code in `src` into a file named `hello-world`. `CGO_ENABLED=0` makes the program self-contained, so it runs without any other system libraries. |
 | `FROM gcr.io/distroless/static-debian12` | Starts the second stage from a very small image that contains almost nothing except what a self-contained program needs. |
 | `COPY --from=build /app/hello-world /hello-world` | Copies the compiled program from the `build` stage. |
 | `EXPOSE 8080` | Notes that the application listens on port 8080. |
 | `CMD ["/hello-world"]` | Runs the program when the container starts. |
 
-The `src/go/.dockerignore` file tells Docker not to send the `hello-world` binary into the build. That file only exists if you ran `go build` on your computer, and the image compiles its own copy.
+The `go/.dockerignore` file tells Docker not to send the `hello-world` binary into the build. That file only exists if you ran `go build` on your computer, and the image compiles its own copy.

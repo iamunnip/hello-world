@@ -1,4 +1,4 @@
 venv/
 .venv/
 __pycache__/
-src/go/hello-world
+go/hello-world
