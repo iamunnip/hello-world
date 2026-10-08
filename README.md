@@ -80,8 +80,8 @@ The repository uses GitHub Actions. Each application has its own workflow:
 
 | Workflow | File | Runs when these files change |
 |---|---|---|
-| Python build and push | `.github/workflows/python.yml` | `python/`, `python.yml`, `.github/actions/python/`, `.github/actions/docker-build/` |
-| Go build and push | `.github/workflows/go.yml` | `go/`, `go.yml`, `.github/actions/go/`, `.github/actions/docker-build/` |
+| Python | `.github/workflows/python.yml` | `python/`, `python.yml`, `.github/actions/python/`, `.github/actions/docker-build/` |
+| Go | `.github/workflows/go.yml` | `go/`, `go.yml`, `.github/actions/go/`, `.github/actions/docker-build/` |
 
 A change to only the Python files runs only the Python workflow, and the same for Go. A change to the shared Docker build runs both.
 
