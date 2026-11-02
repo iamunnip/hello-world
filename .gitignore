@@ -1,0 +1,17 @@
+# Python: the private add-ons folder and temporary files
+.venv/
+__pycache__/
+
+# Go: the program made by "go build"
+src/go/hello-world
+
+# Rust: the build output folder
+target/
+
+# Secrets and passwords: never upload these
+.env
+
+# Files made by code editors and operating systems
+.idea/
+.vscode/
+.DS_Store
